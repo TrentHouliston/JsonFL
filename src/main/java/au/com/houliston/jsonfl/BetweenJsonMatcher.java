@@ -1,3 +1,19 @@
+/**
+ * This file is part of JsonFL.
+ *
+ * JsonFL is free software: you can redistribute it and/or modify it under the
+ * terms of the Lesser GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ *
+ * JsonFL is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the Lesser GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the Lesser GNU General Public License
+ * along with JsonFL. If not, see <http://www.gnu.org/licenses/>.
+ */
 package au.com.houliston.jsonfl;
 
 import java.util.List;
@@ -8,7 +24,12 @@ import java.util.Map;
  * that it is numerically between the two, and in the case of Strings they are
  * compared alphabetically
  *
+ * Example {'foo':{'?between':[10,20]}}
+ *
+ * Matches {'foo':7}
+ *
  * @author Trent Houliston
+ * @version 1.0
  */
 class BetweenJsonMatcher extends ItemJsonMatcher
 {
@@ -28,16 +49,16 @@ class BetweenJsonMatcher extends ItemJsonMatcher
 	 * @throws InvalidJsonQueryException If the passed object is an invalid
 	 */
 	@SuppressWarnings("unchecked")
-	public BetweenJsonMatcher(Map<String, Object> between) throws InvalidJsonQueryException
+	public BetweenJsonMatcher(Map<String, Object> between) throws InvalidJsonFLException
 	{
 		//Get the between expression
 		Object obj = between.get("?between");
-		
+
 		//Check to make sure that this object is a list
 		if (obj instanceof List)
 		{
 			List<Object> list = (List<Object>) obj;
-			
+
 			//Make sure we only have a minimum and maxiumum object
 			if (list.size() == 2)
 			{
@@ -46,33 +67,39 @@ class BetweenJsonMatcher extends ItemJsonMatcher
 					//Get our minimum and maximum objects
 					min = (Comparable<Object>) list.get(0);
 					max = (Comparable<Object>) list.get(1);
+
+					if (min.compareTo(max) > 0)
+					{
+						throw new InvalidJsonFLException("The minimum element was higher then the maximum");
+					}
 				}
 				catch (ClassCastException ex)
 				{
-					throw new InvalidJsonQueryException("Only Strings and Numbers may be used in a between statement");
+					throw new InvalidJsonFLException("Only Strings and Numbers may be used in a between statement");
 				}
 
 				//Check they are both the same class
 				if (min == null || max == null || min.getClass() != max.getClass())
 				{
-					throw new InvalidJsonQueryException("Both members of a ?between expression must be the same kind");
+					throw new InvalidJsonFLException("Both members of a ?between expression must be the same kind");
 				}
 			}
 			else
 			{
-				//They put in more then 2 elements in the array
-				throw new InvalidJsonQueryException("A ?between statement must only contain 2 elements");
+				//They put in more or less then 2 elements in the array
+				throw new InvalidJsonFLException("A ?between statement must only contain 2 elements");
 			}
 		}
 		else
 		{
 			//They didnt give an array as the parameter
-			throw new InvalidJsonQueryException("The ?between statement was incorrectly defined, it must be defined in an array");
+			throw new InvalidJsonFLException("The ?between statement was incorrectly defined, it must be defined in an array");
 		}
 	}
 
 	/**
-	 * This method tests if the passed object is between the two objects that were done up
+	 * This method tests if the passed object is between the two objects that
+	 * were done up
 	 *
 	 * @param target The object to check if it is between these two objects
 	 *
@@ -91,7 +118,7 @@ class BetweenJsonMatcher extends ItemJsonMatcher
 			int up = max.compareTo(target);
 
 			//Return if this is between the two
-			return (up < 1 && down > -1);
+			return (up >= 0 && down <= 0);
 		}
 		else
 		{

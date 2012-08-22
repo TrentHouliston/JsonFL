@@ -1,3 +1,19 @@
+/**
+ * This file is part of JsonFL.
+ *
+ * JsonFL is free software: you can redistribute it and/or modify it under the
+ * terms of the Lesser GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ *
+ * JsonFL is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the Lesser GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the Lesser GNU General Public License
+ * along with JsonFL. If not, see <http://www.gnu.org/licenses/>.
+ */
 package au.com.houliston.jsonfl;
 
 import java.util.*;
@@ -7,7 +23,12 @@ import java.util.*;
  * elements in the definition and the passed object are the same, and that all
  * the elements in the array match
  *
+ * Example {'foo':[1,2,3]}
+ *
+ * Matches {'foo':[1,2,3]}
+ *
  * @author Trent Houliston
+ * @version 1.0
  */
 class ArrayJsonMatcher extends ItemJsonMatcher
 {
@@ -15,7 +36,7 @@ class ArrayJsonMatcher extends ItemJsonMatcher
 	/**
 	 * This object holds the array children of this Array matcher
 	 */
-	private final List<JsonMatcher> children;
+	private final List<ItemJsonMatcher> children;
 
 	/**
 	 * Constructor for the matcher, It processes the children into a set of
@@ -26,7 +47,7 @@ class ArrayJsonMatcher extends ItemJsonMatcher
 	 * @throws InvalidJsonQueryException if the definition of this object or one
 	 *                                      of its sub objects is invalid
 	 */
-	ArrayJsonMatcher(List<Object> list) throws InvalidJsonQueryException
+	ArrayJsonMatcher(List<Object> list) throws InvalidJsonFLException
 	{
 		//Process this array into an array of JsonMatchers
 		children = buildArrayMatcher(list);
@@ -65,20 +86,10 @@ class ArrayJsonMatcher extends ItemJsonMatcher
 				{
 					//Get the objects to compare
 					Object them = t.get(i);
-					JsonMatcher us = children.get(i);
+					ItemJsonMatcher us = children.get(i);
 
-					//Check if the matcher is to be matched to a group matcher,
-					//if so then pass it the root node for this object
-					if (us instanceof GroupJsonMatcher)
-					{
-						//Check if the group matcher matches
-						if (!((GroupJsonMatcher) us).match((Map<String, Object>) them))
-						{
-							return false;
-						}
-					}
-					//Otherwise its an item matcher, check if it validates a match
-					else if (!((ItemJsonMatcher) us).match(them))
+					//Check if the matcher matches
+					if (!us.match(them))
 					{
 						return false;
 					}
@@ -102,9 +113,9 @@ class ArrayJsonMatcher extends ItemJsonMatcher
 	 * @throws InvalidJsonQueryException If the JsonFL statement was invalid
 	 */
 	@SuppressWarnings("unchecked")
-	private List<JsonMatcher> buildArrayMatcher(List<Object> list) throws InvalidJsonQueryException
+	private List<ItemJsonMatcher> buildArrayMatcher(List<Object> list) throws InvalidJsonFLException
 	{
-		ArrayList<JsonMatcher> result = new ArrayList<JsonMatcher>();
+		ArrayList<ItemJsonMatcher> result = new ArrayList<ItemJsonMatcher>();
 
 		//Loop though all of the matchers
 		for (Object ob : list)

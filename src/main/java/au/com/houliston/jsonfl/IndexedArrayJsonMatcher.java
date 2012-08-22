@@ -1,3 +1,19 @@
+/**
+ * This file is part of JsonFL.
+ *
+ * JsonFL is free software: you can redistribute it and/or modify it under the
+ * terms of the Lesser GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ *
+ * JsonFL is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the Lesser GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the Lesser GNU General Public License
+ * along with JsonFL. If not, see <http://www.gnu.org/licenses/>.
+ */
 package au.com.houliston.jsonfl;
 
 import java.util.LinkedHashMap;
@@ -10,7 +26,12 @@ import java.util.Set;
  * This is used for checking an array to a list of indexes and values. It will
  * check a set of indexes match the predefined matchers
  *
+ * Example: {'foo':{'?indexed':{'0':'bar','2':'value'}}}
+ *
+ * Matches: {'foo':['bar','with','value']}
+ *
  * @author Trent Houliston
+ * @version 1.0
  */
 class IndexedArrayJsonMatcher extends ItemJsonMatcher
 {
@@ -19,7 +40,7 @@ class IndexedArrayJsonMatcher extends ItemJsonMatcher
 	 * This object holds the children indexes and objects that they should match
 	 * to.
 	 */
-	private final Map<Integer, JsonMatcher> children;
+	private final Map<Integer, ItemJsonMatcher> children;
 
 	/**
 	 * Builds an IndexedArrayMatcher, this matches against an array against a
@@ -32,7 +53,7 @@ class IndexedArrayJsonMatcher extends ItemJsonMatcher
 	 *                                      JsonFL expression
 	 */
 	@SuppressWarnings("unchecked")
-	public IndexedArrayJsonMatcher(Map<String, Object> map) throws InvalidJsonQueryException
+	public IndexedArrayJsonMatcher(Map<String, Object> map) throws InvalidJsonFLException
 	{
 		//Get the ?indexed field
 		Object obj = map.get("?indexed");
@@ -41,11 +62,16 @@ class IndexedArrayJsonMatcher extends ItemJsonMatcher
 		{
 			//Parse the object into a map of filtering objects
 			children = buildIndexedMatcher((Map<String, Object>) obj);
+
+			if (children.isEmpty())
+			{
+				throw new InvalidJsonFLException("Having an empty IndexedArray makes no sense");
+			}
 		}
 		else
 		{
 			//The indexed expression was not an object
-			throw new InvalidJsonQueryException("?indexed expressions must be an object");
+			throw new InvalidJsonFLException("?indexed expressions must be an object");
 		}
 	}
 
@@ -61,36 +87,23 @@ class IndexedArrayJsonMatcher extends ItemJsonMatcher
 	public boolean match(Object target)
 	{
 		//Check if this is a list
-		if (!(target instanceof List))
+		if (target instanceof List)
 		{
 			List<Object> t = (List<Object>) target;
 
 			//Loop through all our requirements (our matching set)
-			for (Entry<Integer, JsonMatcher> match : children.entrySet())
+			for (Entry<Integer, ItemJsonMatcher> match : children.entrySet())
 			{
 				try
 				{
 					//Get the two objects to compare
 					Object them = t.get(match.getKey());
-					JsonMatcher us = match.getValue();
+					ItemJsonMatcher us = match.getValue();
 
-					//Check if we are a group matcher
-					if (us instanceof GroupJsonMatcher)
+					//Try to match the object
+					if (!us.match(them))
 					{
-						//Pass the root of this through to be matched
-						if (!((GroupJsonMatcher) us).match((LinkedHashMap<String, Object>) them))
-						{
-							return false;
-						}
-					}
-					//Otherwise it is an item matcher
-					else
-					{
-						//Try to match the object
-						if (!((ItemJsonMatcher) us).match(them))
-						{
-							return false;
-						}
+						return false;
 					}
 				}
 				catch (IndexOutOfBoundsException ex)
@@ -121,9 +134,9 @@ class IndexedArrayJsonMatcher extends ItemJsonMatcher
 	 * @throws InvalidJsonQueryException If the JsonFL statement was invalid
 	 */
 	@SuppressWarnings("unchecked")
-	private Map<Integer, JsonMatcher> buildIndexedMatcher(Map<String, Object> map) throws InvalidJsonQueryException
+	private Map<Integer, ItemJsonMatcher> buildIndexedMatcher(Map<String, Object> map) throws InvalidJsonFLException
 	{
-		LinkedHashMap<Integer, JsonMatcher> result = new LinkedHashMap<Integer, JsonMatcher>();
+		LinkedHashMap<Integer, ItemJsonMatcher> result = new LinkedHashMap<Integer, ItemJsonMatcher>();
 
 		//Get all of the index/matchers
 		Set<Entry<String, Object>> set = map.entrySet();

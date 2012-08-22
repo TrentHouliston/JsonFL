@@ -1,86 +1,83 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * This file is part of JsonFL.
+ *
+ * JsonFL is free software: you can redistribute it and/or modify it under the
+ * terms of the Lesser GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ *
+ * JsonFL is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the Lesser GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the Lesser GNU General Public License
+ * along with JsonFL. If not, see <http://www.gnu.org/licenses/>.
  */
 package au.com.houliston.jsonfl;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 /**
+ * This is the root class for all JsonFL Matcher objects.
  *
- * @author trent
+ * @author Trent Houliston
+ * @version 1.0
  */
-public abstract class JsonMatcher
+abstract class JsonMatcher
 {
-	//TODO put the method which builds the objects in here
 
 	/**
-	 * This method is used by all group matchers to build its sub objects, the
-	 * Group Matchers will handle returning true or false based on which of
-	 * these match
-	 *
-	 * @param query The json object which is to be used as the definition for
-	 *                 the submatchers
-	 *
-	 * @return A map of the matchers
-	 *
-	 * @throws InvalidJsonQueryException If this object or any of the sub
-	 *                                      objects it is created throw an
-	 *                                      exception on creation
+	 * This is an explicit undefined object to be passed down when a key does
+	 * not exist
 	 */
-	@SuppressWarnings("unchecked")
-	protected Map<String, JsonMatcher> buildGroup(Map<String, Object> query) throws InvalidJsonQueryException
+	protected static final Object UNDEFINED = new Object();
+
+	/**
+	 * This method is used to match objects of an unknown type. It will work out
+	 * whether to pass down to a lower group, or use an item matcher and if so
+	 * whether to use undefined
+	 *
+	 * @param key     The key that this object is attached to
+	 * @param matcher The matcher which is to be used against this
+	 * @param root    The root of the current level of the object being matched
+	 *
+	 * @return If the object matched
+	 */
+	public boolean findMatch(String key, JsonMatcher matcher, Map<String, Object> root)
 	{
-		//The storage for the results of this
-		HashMap<String, JsonMatcher> result = new HashMap<String, JsonMatcher>();
-
-		//Loop through the map we are given
-		for (Map.Entry<String, Object> en : query.entrySet())
+		//Check if it is a group json matcher
+		if (matcher instanceof GroupJsonMatcher)
 		{
-			//Store the key and values
-			String key = en.getKey();
-			Object value = en.getValue();
-
-			//If the subobject is an or expression then create an or matcher
-			if (key.equals("?or"))
-			{
-				//Check to make sure the value is a map
-				if (!(value instanceof Map))
-				{
-					throw new InvalidJsonQueryException("An ?or expression must contain an object as its value");
-				}
-				else
-				{
-					//Add the ?or matcher
-					result.put(key, new OrJsonMatcher((Map) value));
-				}
-			}
-			//If it is a not expression
-			else if (key.equals("?not"))
-			{
-				//Make sure that it is an instance of a map
-				if (!(value instanceof Map))
-				{
-					throw new InvalidJsonQueryException("A ?not expression must contain an object as its value");
-				}
-				else
-				{
-					result.put(key, new NotJsonMatcher((LinkedHashMap) value));
-				}
-			}
-			//If the value is a null then we are matching a explicit null
-			else
-			{
-				result.put(key, getMatcher(value));
-			}
+			//Check if it matches with the root context
+			return ((GroupJsonMatcher) matcher).match(root);
 		}
-
-		//Return this completed map of sub objects for this array
-		return result;
+		//Check if we have the key
+		else if (root.containsKey(key))
+		{
+			//Match as an item
+			return ((ItemJsonMatcher) matcher).match(root.get(key));
+		}
+		//Otherwise try matching with the undefined object
+		else
+		{
+			return ((ItemJsonMatcher) matcher).match(UNDEFINED);
+		}
 	}
 
+	/**
+	 * This method will return a matcher for an object, It will work out what
+	 * kind of matcher to create and then return it
+	 *
+	 * @param o The object which defines this matcher
+	 *
+	 * @return A JsonMatcher for the passed object
+	 *
+	 * @throws InvalidJsonFLException If the passed object is not valid JsonFL
+	 */
 	@SuppressWarnings("unchecked")
-	protected JsonMatcher getMatcher(Object o) throws InvalidJsonQueryException
+	protected ItemJsonMatcher getMatcher(Object o) throws InvalidJsonFLException
 	{
 		//If we are matching an explicit null then use the Null matcher
 		if (o == null)
@@ -113,6 +110,11 @@ public abstract class JsonMatcher
 			{
 				return new RegexJsonMatcher(var);
 			}
+			//If it is a wildcard expression make a wildcard matcher
+			else if (var.containsKey("?exists"))
+			{
+				return new ExistsJsonMatcher(var);
+			}
 			//Otherwise this is a subobject
 			else
 			{
@@ -137,7 +139,7 @@ public abstract class JsonMatcher
 		//Otherwise it must be some other random java object
 		else
 		{
-			throw new InvalidJsonQueryException("Bad definition, contains invalid json objects");
+			throw new InvalidJsonFLException("Bad definition, contains invalid json objects");
 		}
 	}
 }

@@ -17,36 +17,32 @@
 package au.com.houliston.jsonfl;
 
 /**
- * This matcher checks for an explicit null in the Json, it will return true if
- * the Json was set to null, not to undefined
- *
- * Example: {'foo':null}
- *
- * Matches: {'foo':null}
+ * Is thrown when the creation string for the JsonFL is invalid
  *
  * @author Trent Houliston
  * @version 1.0
  */
-class NullJsonMatcher extends ItemJsonMatcher
+public class InvalidJsonFLException extends Exception
 {
 
 	/**
-	 * Empty constructor as this can only be a null
+	 * Creates a new InvalidJsonFLException with the passed message
+	 *
+	 * @param message The message to set
 	 */
-	public NullJsonMatcher()
+	public InvalidJsonFLException(String message)
 	{
+		super(message);
 	}
 
 	/**
-	 * Checks if the object is a null
+	 * Creates a new InvalidJsonFLException along with a message and a cause
 	 *
-	 * @param target The object to test against
-	 *
-	 * @return True if this object is null false otherwise
+	 * @param message The message to set
+	 * @param cause   The root cause which made this exception
 	 */
-	@Override
-	public boolean match(Object target)
+	public InvalidJsonFLException(String message, Throwable cause)
 	{
-		return target == null;
+		super(message, cause);
 	}
 }
