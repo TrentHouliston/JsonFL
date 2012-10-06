@@ -126,6 +126,11 @@ abstract class JsonMatcher
 		{
 			return new ArrayJsonMatcher((List<Object>) o);
 		}
+		//If it is a boolean then it is a boolean matcher
+		else if (o instanceof Boolean)
+		{
+			return new BooleanJsonMatcher((Boolean) o);
+		}
 		//If its a number then its a number matcher
 		else if (o instanceof Number)
 		{
